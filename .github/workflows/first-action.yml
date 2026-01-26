@@ -18,4 +18,4 @@ jobs:
       - name: Job-2 Step-2
         run: echo 'This is job-2 step-2'
       - name: Job-2 Step-3
-        run: echo 'This is job-2 step-3
+        run: echo 'This is job-2 step-3'
