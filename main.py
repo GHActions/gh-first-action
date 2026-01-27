@@ -4,6 +4,10 @@ from typing import List
 
 app = FastAPI()
 
+api_key = "blah blah blah"
+password = "supersecret"
+secret = "topsecret"
+
 # Constants
 ITEM_NOT_FOUND = "Item not found"
 
