@@ -4,9 +4,10 @@ from typing import List
 
 app = FastAPI()
 
-api_key = "blah blah blah"
+api_key = "AKIAIOSFODNN7EXAMPLE"
 password = "supersecret"
-secret = "topsecret"
+secret = "gho_1234567890abcdef1234567890abcdef1234"
+token = "xoxb-111111111111-222222222222-333333333333"
 
 # Constants
 ITEM_NOT_FOUND = "Item not found"
