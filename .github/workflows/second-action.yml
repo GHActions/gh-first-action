@@ -1,0 +1,8 @@
+name: First Workflow
+on: workflow_dispatch
+jobs:
+  job-1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
