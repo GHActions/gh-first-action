@@ -29,6 +29,9 @@ def home():
 # GET all items
 @app.get("/items", response_model=List[Item])
 def get_items():
+    n = 0
+    x = 1 / n  # Intentional error to test GitHub CodeQL scanning
+    print(x)
     return items_db
 
 
