@@ -9,6 +9,7 @@ password = "supersecret"
 secret = "gho_1234567890abcdef1234567890abcdef1234"
 token = "xoxb-111111111111-222222222222-333333333333"
 gh_token = "ghp_1234567890abcdef1234567890abcdef1234"
+ghs_token = "ghs_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 # Constants
 ITEM_NOT_FOUND = "Item not found"
