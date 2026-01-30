@@ -97,7 +97,7 @@ FILE CONTENT:
         max_tokens=800
     )
 
-    return response.choices[0].message["content"]
+    return response.choices[0].message.content
 
 
 def run_review():
