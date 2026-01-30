@@ -2,6 +2,7 @@ import os
 import json
 import pathlib
 from openai import OpenAI
+import subprocess
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -68,6 +69,41 @@ def filter_source_files(files):
     return filtered
 
 
+def get_diff_positions(file_path):
+    """
+    Returns a mapping: { line_number_in_file: diff_position }
+    """
+    cmd = ["gh", "pr", "diff", "--patch", file_path]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        return {}
+
+    diff = result.stdout.splitlines()
+
+    positions = {}
+    file_line = 0
+    diff_pos = 0
+
+    for line in diff:
+        diff_pos += 1
+
+        if line.startswith("@@"):
+            # Example: @@ -1,5 +1,7 @@
+            hunk = line.split(" ")[2]  # "+1,7"
+            start = int(hunk.split(",")[0].replace("+", ""))
+            file_line = start - 1
+            continue
+
+        if line.startswith("+") and not line.startswith("+++"):
+            file_line += 1
+            positions[file_line] = diff_pos
+        elif not line.startswith("-"):
+            file_line += 1
+
+    return positions
+
+
 def review_file(path):
     """Send a single file to the LLM for review."""
     try:
@@ -97,23 +133,52 @@ FILE CONTENT:
         max_tokens=800
     )
 
-    return response.choices[0].message.content
+    ai_text = response.choices[0].message.content
+    comments = []
+    for line in ai_text.split("\n"):
+        if line.lower().startswith("line "):
+            try:
+                num = int(line.split(":")[0].split()[1])
+                body = line.split(":", 1)[1].strip()
+                comments.append((num, body))
+            except Exception:
+                continue
+
+    return comments
 
 
 def run_review():
-    print("### AI Code Review Report ###\n")
-
     changed_files = load_changed_files()
-    source_files = filter_source_files(changed_files)
+    all_comments = []
 
-    if not source_files:
-        print("No source files changed in this PR.")
-        return
+    for f in changed_files:
+        print(f"--- Reviewing {f} ---")
+        file_comments = review_file(f)
 
-    for f in source_files:
-        print(f"\n--- Reviewing {f} ---\n")
-        result = review_file(f)
-        print(result)
+        if not file_comments:
+            continue
+
+        diff_map = get_diff_positions(f)
+
+        for (line_num, body) in file_comments:
+            if line_num in diff_map:
+                all_comments.append({
+                    "path": f,
+                    "position": diff_map[line_num],
+                    "body": body
+                })
+
+    # Write GitHub review JSON
+    review_json = {
+        "body": "AI Code Review",
+        "event": "COMMENT",
+        "comments": all_comments
+    }
+
+    with open("review_output.json", "w") as out:
+        json.dump(review_json, out, indent=2)
+
+    print("Generated review_output.json with inline comments.")
 
 
 if __name__ == "__main__":
