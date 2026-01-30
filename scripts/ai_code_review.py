@@ -7,6 +7,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 ALLOWED_EXTENSIONS = {".py", ".js", ".ts", ".go", ".java", ".rb", ".php"}
 
+
 def load_changed_files():
     """
     Reads the GitHub event payload to extract changed files in the PR.
@@ -14,7 +15,10 @@ def load_changed_files():
     """
     event_path = os.getenv("GITHUB_EVENT_PATH")
     if not event_path or not pathlib.Path(event_path).exists():
-        raise RuntimeError("GITHUB_EVENT_PATH not found. Are you running inside GitHub Actions?")
+        raise RuntimeError(
+            "GITHUB_EVENT_PATH not found. "
+            "Are you running inside GitHub Actions?"
+        )
 
     with open(event_path, "r", encoding="utf-8") as f:
         event = json.load(f)
@@ -31,7 +35,16 @@ def load_changed_files():
     # Use GitHub CLI to fetch changed files
     import subprocess
     result = subprocess.run(
-        ["gh", "pr", "view", str(pr_number), "--repo", repo, "--json", "files"],
+        [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--repo",
+            repo,
+            "--json",
+            "files"
+        ],
         capture_output=True,
         text=True
     )
