@@ -1,8 +1,28 @@
-name: First Workflow
-on: workflow_dispatch
+name: AI Code Review
+
+on:
+  push:
+    branches:
+      - main
+
 jobs:
-  job-1:
+  ai-review:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout code
-        uses: actions/checkout@v6
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install openai
+
+      - name: Run AI Code Review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python scripts/ai_code_review.py
