@@ -72,6 +72,14 @@ def get_diff_positions(file_path):
     """
     Returns a mapping: { line_number_in_file: diff_position }
     """
+    event = json.load(open(os.getenv("GITHUB_EVENT_PATH")))
+    pr_number = event["number"]
+    file_path = str(pathlib.Path(file_path).as_posix()).lstrip("./")
+
+    cmd = ["gh", "pr", "diff", str(pr_number), "--patch", file_path]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    print(f"Git diff result for PR {pr_number}, file {file_path}:", result)
+
     cmd = ["gh", "pr", "diff", "--patch", file_path]
     result = subprocess.run(cmd, capture_output=True, text=True)
     print(f"Git diff result for {file_path}:", result)
