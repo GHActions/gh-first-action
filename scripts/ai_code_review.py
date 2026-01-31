@@ -149,9 +149,10 @@ FILE CONTENT:
 
 def run_review():
     changed_files = load_changed_files()
+    source_files = filter_source_files(changed_files)
     all_comments = []
 
-    for f in changed_files:
+    for f in source_files:
         print(f"--- Reviewing {f} ---")
         file_comments = review_file(f)
 
