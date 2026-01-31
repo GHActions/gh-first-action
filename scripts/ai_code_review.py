@@ -15,7 +15,6 @@ def load_changed_files():
     Works for pull_request and pull_request_target events.
     """
     event_path = os.getenv("GITHUB_EVENT_PATH")
-    print("GITHUB_EVENT_PATH:", event_path)
     if not event_path or not pathlib.Path(event_path).exists():
         raise RuntimeError(
             "GITHUB_EVENT_PATH not found. "
@@ -29,9 +28,7 @@ def load_changed_files():
     # but the event payload does NOT include them directly.
     # So we rely on the GitHub CLI (gh) or fallback to reviewing all files.
     pr_number = event.get("number")
-    print("PR Number:", pr_number)
     repo = os.getenv("GITHUB_REPOSITORY")
-    print("Repository:", repo)
 
     if not pr_number or not repo:
         raise RuntimeError("Missing PR number or repository info.")
@@ -58,8 +55,6 @@ def load_changed_files():
 
     data = json.loads(result.stdout)
     files = [f["path"] for f in data.get("files", [])]
-
-    print("Changed files:", files)
     return files
 
 
@@ -148,12 +143,10 @@ def review_file(path):
     )
 
     ai_text = response.choices[0].message.content
-    print(f"AI Review for {path}:\n{ai_text}\n")
 
     try:
         data = json.loads(ai_text)
         comments = [(item["line"], item["comment"]) for item in data]
-        print("Extracted comments:", comments)
         return comments
     except Exception:
         print("Failed to parse JSON:", ai_text)
@@ -172,7 +165,9 @@ def run_review():
         if not file_comments:
             continue
 
+        print(f"Comments for {f}:", file_comments)
         diff_map = get_diff_positions(f)
+        print(f"Diff map for {f}:", diff_map)
 
         for (line_num, body) in file_comments:
             if line_num in diff_map:
