@@ -176,6 +176,10 @@ def run_review():
         "comments": all_comments
     }
 
+    print("=== REVIEW JSON ===")
+    print(json.dumps(review_json, indent=2))
+    print("====================")
+
     with open("review_output.json", "w") as out:
         json.dump(review_json, out, indent=2)
 
