@@ -69,22 +69,39 @@ def filter_source_files(files):
 
 
 def get_diff_positions(file_path):
-    """
-    Returns a mapping: { line_number_in_file: diff_position }
-    """
-    event = json.load(open(os.getenv("GITHUB_EVENT_PATH")))
-    pr_number = event["number"]
+    # Normalize path
     file_path = str(pathlib.Path(file_path).as_posix()).lstrip("./")
 
-    cmd = ["gh", "pr", "diff", str(pr_number), "--patch", file_path]
+    # Load PR number
+    event = json.load(open(os.getenv("GITHUB_EVENT_PATH")))
+    pr_number = event["number"]
+
+    # Call GitHub API to get file diffs
+    cmd = [
+        "gh", "api",
+        f"repos/{os.getenv('GITHUB_REPOSITORY')}/pulls/{pr_number}/files"
+    ]
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    print(f"Git diff result for PR {pr_number}, file {file_path}:", result)
 
     if result.returncode != 0:
+        print("Error calling gh api:", result.stderr)
         return {}
 
-    print(f"Diff for {file_path}:\n", result.stdout)
-    diff = result.stdout.splitlines()
+    files = json.loads(result.stdout)
+
+    # Find the file we care about
+    patch = None
+    for f in files:
+        if f["filename"] == file_path:
+            patch = f.get("patch")
+            break
+
+    if not patch:
+        print(f"No patch found for {file_path}")
+        return {}
+
+    diff = patch.splitlines()
 
     positions = {}
     file_line = 0
@@ -94,8 +111,7 @@ def get_diff_positions(file_path):
         diff_pos += 1
 
         if line.startswith("@@"):
-            # Example: @@ -1,5 +1,7 @@
-            hunk = line.split(" ")[2]  # "+1,7"
+            hunk = line.split(" ")[2]  # "+12,5"
             start = int(hunk.split(",")[0].replace("+", ""))
             file_line = start - 1
             continue
@@ -106,7 +122,6 @@ def get_diff_positions(file_path):
         elif not line.startswith("-"):
             file_line += 1
 
-    print(f"Diff positions for {file_path}:", positions)
     return positions
 
 
