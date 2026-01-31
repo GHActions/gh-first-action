@@ -74,7 +74,7 @@ def get_diff_positions(file_path):
     """
     cmd = ["gh", "pr", "diff", "--patch", file_path]
     result = subprocess.run(cmd, capture_output=True, text=True)
-
+    print(f"Git diff result for {file_path}:", result.stdout)
     if result.returncode != 0:
         return {}
 
