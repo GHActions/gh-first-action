@@ -15,6 +15,7 @@ def load_changed_files():
     Works for pull_request and pull_request_target events.
     """
     event_path = os.getenv("GITHUB_EVENT_PATH")
+    print("GITHUB_EVENT_PATH:", event_path)
     if not event_path or not pathlib.Path(event_path).exists():
         raise RuntimeError(
             "GITHUB_EVENT_PATH not found. "
@@ -28,7 +29,9 @@ def load_changed_files():
     # but the event payload does NOT include them directly.
     # So we rely on the GitHub CLI (gh) or fallback to reviewing all files.
     pr_number = event.get("number")
+    print("PR Number:", pr_number)
     repo = os.getenv("GITHUB_REPOSITORY")
+    print("Repository:", repo)
 
     if not pr_number or not repo:
         raise RuntimeError("Missing PR number or repository info.")
@@ -56,6 +59,7 @@ def load_changed_files():
     data = json.loads(result.stdout)
     files = [f["path"] for f in data.get("files", [])]
 
+    print("Changed files:", files)
     return files
 
 
@@ -79,6 +83,7 @@ def get_diff_positions(file_path):
     if result.returncode != 0:
         return {}
 
+    print(f"Diff for {file_path}:\n", result.stdout)
     diff = result.stdout.splitlines()
 
     positions = {}
@@ -101,6 +106,7 @@ def get_diff_positions(file_path):
         elif not line.startswith("-"):
             file_line += 1
 
+    print(f"Diff positions for {file_path}:", positions)
     return positions
 
 
@@ -134,6 +140,7 @@ FILE CONTENT:
     )
 
     ai_text = response.choices[0].message.content
+    print(f"AI Review for {path}:\n{ai_text}\n")
     comments = []
     for line in ai_text.split("\n"):
         if line.lower().startswith("line "):
@@ -144,6 +151,7 @@ FILE CONTENT:
             except Exception:
                 continue
 
+    print("Extracted comments:", comments)
     return comments
 
 
