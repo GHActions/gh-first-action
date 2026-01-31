@@ -118,20 +118,28 @@ def review_file(path):
         return f"Could not read {path}: {e}"
 
     prompt = f"""
-You are an expert software engineer. Review the following file for:
-- bugs
-- security issues
-- code smells
-- missing edge cases
-- readability problems
-- opportunities for simplification
+    You are an expert software engineer. Review the following file.
 
-Respond with a structured list of findings.
+    Return ONLY valid JSON in this exact format:
 
-FILE PATH: {path}
-FILE CONTENT:
-{content}
-"""
+    [
+    {{"line": <line_number>, "comment": "<text>"}},
+    ...
+    ]
+
+    Rules:
+    - Only include lines that have issues.
+    - Use absolute line numbers from the file.
+    - Do not include explanations outside the JSON.
+    - Do not include markdown.
+    - Do not include headings.
+    - Do not include prose.
+    - Do not wrap the JSON in code fences.
+
+    FILE PATH: {path}
+    FILE CONTENT:
+    {content}
+    """
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -141,18 +149,15 @@ FILE CONTENT:
 
     ai_text = response.choices[0].message.content
     print(f"AI Review for {path}:\n{ai_text}\n")
-    comments = []
-    for line in ai_text.split("\n"):
-        if line.lower().startswith("line "):
-            try:
-                num = int(line.split(":")[0].split()[1])
-                body = line.split(":", 1)[1].strip()
-                comments.append((num, body))
-            except Exception:
-                continue
 
-    print("Extracted comments:", comments)
-    return comments
+    try:
+        data = json.loads(ai_text)
+        comments = [(item["line"], item["comment"]) for item in data]
+        print("Extracted comments:", comments)
+        return comments
+    except Exception:
+        print("Failed to parse JSON:", ai_text)
+        return []
 
 
 def run_review():
