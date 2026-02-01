@@ -9,6 +9,7 @@ import logging
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 ALLOWED_EXTENSIONS = {".py", ".js", ".ts", ".go", ".java", ".rb", ".php"}
+REVIEW_OUTPUT_FILE = "review_output.json"
 
 
 def load_changed_files():
@@ -78,7 +79,7 @@ def get_diff_positions(file_path):
     if not github_event_path.exists():
         logging.error("GITHUB_EVENT_PATH does not exist.")
         return {}
-    
+
     with open(github_event_path, "r", encoding="utf-8") as f:
         event = json.load(f)
         pr_number = event["number"]
@@ -213,15 +214,14 @@ def run_review():
         "event": "COMMENT",
         "comments": all_comments
     }
-
     try:
-        with open("review_output.json", "w") as out:
+        with open(REVIEW_OUTPUT_FILE, "w") as out:
             json.dump(review_json, out, indent=2)
     except Exception as e:
-        logging.error("Failed to write review_output.json: %s", e)
+        logging.error(f"Failed to write {REVIEW_OUTPUT_FILE}: %s", e)
         raise
 
-    logging.info("Generated review_output.json with inline comments.")
+    logging.info(f"Generated {REVIEW_OUTPUT_FILE} with inline comments.")
 
 
 if __name__ == "__main__":
