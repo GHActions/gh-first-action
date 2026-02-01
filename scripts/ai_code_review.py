@@ -85,11 +85,11 @@ def get_diff_positions(file_path):
         pr_number = event["number"]
 
         # Call GitHub API to get file diffs
-        cmd = [
-            "gh", "api",
-            f"repos/{os.getenv('GITHUB_REPOSITORY')}/pulls/{pr_number}/files"
-        ]
-
+        # cmd = [
+        #     "gh", "api",
+        #     f"repos/{os.getenv('GITHUB_REPOSITORY')}/pulls/{pr_number}/files"
+        # ]
+        cmd = ["gh", "pr", "diff", str(pr_number), "--patch", "--path", file_path]
         result = subprocess.run(cmd, capture_output=True, text=True)
 
         if result.returncode != 0:
@@ -127,7 +127,9 @@ def get_diff_positions(file_path):
             if line.startswith("+") and not line.startswith("+++"):
                 file_line += 1
                 positions[file_line] = diff_pos
-            elif not line.startswith("-"):
+            elif line.startswith("-") and not line.startswith("---"):
+                continue
+            else:
                 file_line += 1
 
         return positions
