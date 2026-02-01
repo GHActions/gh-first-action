@@ -204,12 +204,12 @@ def run_review():
         "comments": all_comments
     }
 
-    logging.info("=== REVIEW JSON ===")
-    logging.info(json.dumps(review_json, indent=2))
-    logging.info("====================")
-
-    with open("review_output.json", "w") as out:
-        json.dump(review_json, out, indent=2)
+    try:
+        with open("review_output.json", "w") as out:
+            json.dump(review_json, out, indent=2)
+    except Exception as e:
+        logging.error("Failed to write review_output.json: %s", e)
+        raise
 
     logging.info("Generated review_output.json with inline comments.")
 
