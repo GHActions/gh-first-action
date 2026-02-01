@@ -139,7 +139,7 @@ def review_file(path):
     try:
         content = pathlib.Path(path).read_text(encoding="utf-8")
     except (OSError, UnicodeError) as e:
-        logging.error("Could not read %s: %s", path, e)
+        logging.error(f"Could not read {path}: {e}")
         return []
 
     prompt = f"""
