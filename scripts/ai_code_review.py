@@ -3,6 +3,8 @@ import json
 import pathlib
 from openai import OpenAI
 import subprocess
+import logging
+
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -34,7 +36,6 @@ def load_changed_files():
         raise RuntimeError("Missing PR number or repository info.")
 
     # Use GitHub CLI to fetch changed files
-    import subprocess
     result = subprocess.run(
         [
             "gh",
@@ -73,56 +74,58 @@ def get_diff_positions(file_path):
     file_path = str(pathlib.Path(file_path).as_posix()).lstrip("./")
 
     # Load PR number
-    event = json.load(open(os.getenv("GITHUB_EVENT_PATH")))
-    pr_number = event["number"]
+    github_event_path = pathlib.Path(os.getenv("GITHUB_EVENT_PATH"))
+    with open(github_event_path, "r", encoding="utf-8") as f:
+        event = json.load(f)
+        pr_number = event["number"]
 
-    # Call GitHub API to get file diffs
-    cmd = [
-        "gh", "api",
-        f"repos/{os.getenv('GITHUB_REPOSITORY')}/pulls/{pr_number}/files"
-    ]
+        # Call GitHub API to get file diffs
+        cmd = [
+            "gh", "api",
+            f"repos/{os.getenv('GITHUB_REPOSITORY')}/pulls/{pr_number}/files"
+        ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True)
 
-    if result.returncode != 0:
-        print("Error calling gh api:", result.stderr)
-        return {}
+        if result.returncode != 0:
+            logging.error(f"Error calling gh api: {result.stderr}")
+            return {}
 
-    files = json.loads(result.stdout)
+        files = json.loads(result.stdout)
 
-    # Find the file we care about
-    patch = None
-    for f in files:
-        if f["filename"] == file_path:
-            patch = f.get("patch")
-            break
+        # Find the file we care about
+        patch = None
+        for f in files:
+            if f["filename"] == file_path:
+                patch = f.get("patch")
+                break
 
-    if not patch:
-        print(f"No patch found for {file_path}")
-        return {}
+        if not patch:
+            logging.warning(f"No patch found for {file_path}")
+            return {}
 
-    diff = patch.splitlines()
+        diff = patch.splitlines()
 
-    positions = {}
-    file_line = 0
-    diff_pos = 0
+        positions = {}
+        file_line = 0
+        diff_pos = 0
 
-    for line in diff:
-        diff_pos += 1
+        for line in diff:
+            diff_pos += 1
 
-        if line.startswith("@@"):
-            hunk = line.split(" ")[2]  # "+12,5"
-            start = int(hunk.split(",")[0].replace("+", ""))
-            file_line = start - 1
-            continue
+            if line.startswith("@@"):
+                hunk = line.split(" ")[2]  # "+12,5"
+                start = int(hunk.split(",")[0].replace("+", ""))
+                file_line = start - 1
+                continue
 
-        if line.startswith("+") and not line.startswith("+++"):
-            file_line += 1
-            positions[file_line] = diff_pos
-        elif not line.startswith("-"):
-            file_line += 1
+            if line.startswith("+") and not line.startswith("+++"):
+                file_line += 1
+                positions[file_line] = diff_pos
+            elif not line.startswith("-"):
+                file_line += 1
 
-    return positions
+        return positions
 
 
 def review_file(path):
@@ -169,7 +172,7 @@ def review_file(path):
         comments = [(item["line"], item["comment"]) for item in data]
         return comments
     except Exception:
-        print("Failed to parse JSON:", ai_text)
+        logging.error("Failed to parse JSON: %s", ai_text)
         return []
 
 
@@ -179,16 +182,13 @@ def run_review():
     all_comments = []
 
     for f in source_files:
-        print(f"--- Reviewing {f} ---")
+        logging.info(f"--- Reviewing {f} ---")
         file_comments = review_file(f)
 
         if not file_comments:
             continue
 
-        print(f"Comments for {f}:", file_comments)
         diff_map = get_diff_positions(f)
-        print(f"Diff map for {f}:", diff_map)
-
         for (line_num, body) in file_comments:
             if line_num in diff_map:
                 all_comments.append({
@@ -204,14 +204,14 @@ def run_review():
         "comments": all_comments
     }
 
-    print("=== REVIEW JSON ===")
-    print(json.dumps(review_json, indent=2))
-    print("====================")
+    logging.info("=== REVIEW JSON ===")
+    logging.info(json.dumps(review_json, indent=2))
+    logging.info("====================")
 
     with open("review_output.json", "w") as out:
         json.dump(review_json, out, indent=2)
 
-    print("Generated review_output.json with inline comments.")
+    logging.info("Generated review_output.json with inline comments.")
 
 
 if __name__ == "__main__":
