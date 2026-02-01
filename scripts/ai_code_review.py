@@ -75,6 +75,10 @@ def get_diff_positions(file_path):
 
     # Load PR number
     github_event_path = pathlib.Path(os.getenv("GITHUB_EVENT_PATH"))
+    if not github_event_path.exists():
+        logging.error("GITHUB_EVENT_PATH does not exist.")
+        return {}
+    
     with open(github_event_path, "r", encoding="utf-8") as f:
         event = json.load(f)
         pr_number = event["number"]
@@ -130,10 +134,12 @@ def get_diff_positions(file_path):
 
 def review_file(path):
     """Send a single file to the LLM for review."""
+
     try:
         content = pathlib.Path(path).read_text(encoding="utf-8")
-    except Exception as e:
-        return f"Could not read {path}: {e}"
+    except (OSError, UnicodeError) as e:
+        logging.error("Could not read %s: %s", path, e)
+        return []
 
     prompt = f"""
     You are an expert software engineer. Review the following file.
@@ -171,8 +177,12 @@ def review_file(path):
         data = json.loads(ai_text)
         comments = [(item["line"], item["comment"]) for item in data]
         return comments
-    except Exception:
-        logging.error("Failed to parse JSON: %s", ai_text)
+    except (json.JSONDecodeError, TypeError) as e:
+        logging.error(
+            "Failed to parse JSON from model response: %s; response: %s",
+            e,
+            ai_text
+        )
         return []
 
 
