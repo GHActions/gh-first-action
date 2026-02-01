@@ -216,6 +216,8 @@ def run_review():
         "event": "COMMENT",
         "comments": all_comments
     }
+    # Add a redundant import to test AI Code Review
+    import json
     try:
         with open(REVIEW_OUTPUT_FILE, "w") as out:
             json.dump(review_json, out, indent=2)
